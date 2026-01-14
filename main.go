@@ -20,27 +20,24 @@ import (
 	"time"
 )
 
-// --- Security & Encryption ---
+const BackupPath = "./backups"
+const configPath = "backup_config.json"
+const templatePath = "templates/index.html"
+
+var encryptionKey = GetEncryptionKey()
 
 func GetEncryptionKey() []byte {
 	key := os.Getenv("BACKUP_MASTER_KEY")
 	if key == "" {
-		log.Println("WARNING: BACKUP_MASTER_KEY not set. Using insecure default key.")
-		return []byte("a-very-secret-key-32-chars-long!!")
+		panic("critical configuration error: BACKUP_MASTER_KEY environment variable is not set")
 	}
 	keyBytes := []byte(key)
-	if len(keyBytes) > 32 {
-		return keyBytes[:32]
-	}
-	if len(keyBytes) < 32 {
-		padded := make([]byte, 32)
-		copy(padded, keyBytes)
-		return padded
+	// Enforce strict 32-byte length (AES-256 requirement)
+	if len(keyBytes) != 32 {
+		panic(fmt.Sprintf("critical security error: BACKUP_MASTER_KEY must be exactly 32 bytes; got %d", len(keyBytes)))
 	}
 	return keyBytes
 }
-
-var encryptionKey = GetEncryptionKey()
 
 func encrypt(text string) (string, error) {
 	if text == "" {
@@ -95,7 +92,6 @@ func decrypt(cryptoText string) (string, error) {
 type Config struct {
 	Username     string `json:"username"`
 	PAT          string `json:"pat"`
-	BackupPath   string `json:"backup_path"`
 	IntervalMins int    `json:"interval_mins"`
 }
 
@@ -121,9 +117,6 @@ var state = &AppState{
 	TriggerChan: make(chan bool, 1),
 }
 
-const configPath = "backup_config.json"
-const templatePath = "templates/index.html"
-
 // --- Logic ---
 
 func (s *AppState) addLog(msg string) {
@@ -141,7 +134,6 @@ func loadConfig() Config {
 	if err == nil {
 		json.Unmarshal(data, &c)
 	} else {
-		c.BackupPath = "backups"
 		c.IntervalMins = 60
 	}
 	return c
@@ -157,7 +149,7 @@ func saveConfig(c Config) error {
 	return os.WriteFile(configPath, data, 0644)
 }
 
-func gitSync(repoName string, cloneURL string, targetDir string) error {
+func gitSync(cloneURL, targetDir string) error {
 	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
 		return exec.Command("git", "clone", "--mirror", cloneURL, targetDir).Run()
 	}
@@ -210,7 +202,7 @@ func backupWorker() {
 			if err != nil {
 				state.addLog("Fetch failed: " + err.Error())
 			} else {
-				os.MkdirAll(conf.BackupPath, 0755)
+				os.MkdirAll(BackupPath, 0755)
 				decryptedPat, _ := decrypt(conf.PAT)
 
 				for i, name := range names {
@@ -223,9 +215,9 @@ func backupWorker() {
 					state.mu.Unlock()
 
 					authURL := fmt.Sprintf("https://%s:%s@%s", conf.Username, decryptedPat, urls[i][8:])
-					target := filepath.Join(conf.BackupPath, name+".git")
+					target := filepath.Join(BackupPath, name+".git")
 
-					syncErr := gitSync(name, authURL, target)
+					syncErr := gitSync(authURL, target)
 
 					state.mu.Lock()
 					repo.LastBackup = time.Now()
@@ -296,9 +288,8 @@ func handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newConfig := Config{
-		Username:   r.FormValue("username"),
-		PAT:        finalPat,
-		BackupPath: r.FormValue("backup_path"),
+		Username: r.FormValue("username"),
+		PAT:      finalPat,
 	}
 	newConfig.IntervalMins, _ = strconv.Atoi(r.FormValue("interval_mins"))
 
