@@ -6,8 +6,6 @@ services:
     environment:
       - GITHUB_USER=${GITHUB_USER}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      # - GITHUB_TOKEN_FILE=/run/secrets/gh_token
-      - BACKUP_SCHEDULE=0 5 * * * # Every day at 5:00 AM. CRON FORMAT: Minute Hour Day Month DayOfWeek
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE} # CRON FORMAT: Minute Hour Day Month DayOfWeek. Example 0 5 * * * # Every day at 5:00 AM.
     volumes:
       - ${DATA_DIR:-./data/backups}:/backups
-      # - ./secrets/gh_token.txt:/run/secrets/gh_token:ro
