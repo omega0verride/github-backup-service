@@ -1,0 +1,13 @@
+services:
+  github-backup:
+    build: .
+    container_name: gh-backup-service
+    restart: unless-stopped
+    environment:
+      - GITHUB_USER=omega0verride
+      - BACKUP_SCHEDULE=0 5 * * * # Every day at 5:00 AM. CRON FORMAT: Minute Hour Day Month DayOfWeek
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      # - GITHUB_TOKEN_FILE=/run/secrets/gh_token
+    volumes:
+      - ${DATA_DIR:./github-backup/data/backups}:/backups
+      # - ./secrets/gh_token.txt:/run/secrets/gh_token:ro
