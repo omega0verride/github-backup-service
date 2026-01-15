@@ -57,9 +57,9 @@ def run_backup():
         token = get_token()
         cmd = [
             "github-backup", USER,
-            "--token", token,
+            "--token-fine", token,
             "--output-directory", BACKUP_DIR,
-            "--all", "--incremental", "--private", "--repositories"
+            "--repositories", "--incremental", "--private"
         ]
         subprocess.run(cmd, check=True)
         
