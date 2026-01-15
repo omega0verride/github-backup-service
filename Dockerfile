@@ -5,7 +5,7 @@ RUN apk add --no-cache git
 RUN pip install github-backup croniter
 
 WORKDIR /app
-COPY scheduler.py .
+COPY main.py .
 RUN mkdir /backups
 
-CMD ["python", "-u", "scheduler.py"]
+CMD ["python", "-u", "main.py"]
