@@ -1,7 +1,8 @@
 # GitHub Backup Service
 
 A lightweight automation service that performs incremental backups of all repositories in a GitHub account. It uses a cron-based scheduler to pull public and private repositories and includes a self-healing mechanism to remove corrupted repository folders.  
-Can be used as a way to backup your account repos (just in case).
+Can be used as a way to backup your account repos (just in case).  
+Based on https://github.com/josegonzalez/python-github-backup. 
 
 ---
 
